@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+<body>
+  <div class="app">
+    <div id="game"></div>
+    <button id="begin">开始</button>
+    <button id="pause">停止</button>
+  </div>
+
+  <script>
+    class GluttonousSnake {
+      #size
+      constructor (size) {
+        this.#size = size
+        ;[this.head,this.tail,this.snakePosition] = this.createSnake()
+        this.applePOsition = this.createApple()
+        this.score = 0
+        this._headMoveto = 'right'
+      }
+
+
+
+      createSnake () {
+        let site = this.#size / 2 | 0
+        let head = [site + 1,site]
+        let body = [site,site]
+        let tail = [site - 1,site]
+        let snakeArr = [tail,body,head]
+
+        return [head,tail,snakeArr]
+      }
+
+      createApple () {
+        while(true){
+          let row = (Math.random() * this.#size | 0) - 1
+          let column = (Math.random() * this.#size | 0) - 1
+          
+          if(!this.snakePosition.find(item => item[1] == row && item[0] == column )){
+            return [column,row]
+          }
+        }
+      }
+      
+      move () {
+        let [hx,hy] = this.head
+        let newX,newY
+        if(this._headMoveto == 'right'){
+          [newX,newY] = [hx + 1,hy]
+        }else if(this._headMoveto == 'left'){
+          [newX,newY] = [hx - 1,hy]
+        }else if(this._headMoveto == 'up'){
+          [newX,newY] = [hx,hy - 1]
+        }else if(this._headMoveto == 'down'){
+          [newX,newY] = [hx,hy + 1]
+        }else{
+          throw new  Error('unknown direction of head')
+        }
+        this.head = [newX,newY]
+        if(this.isOver()) return 'game over'
+
+        if(this.applePOsition[0] == newX && this.applePOsition[1] == newY){
+          this.score++
+          this.applePOsition = this.createApple()
+          this.snakePosition.push(this.head)
+          return
+        }
+        
+        this.snakePosition.shift()
+        this.snakePosition.push(this.head)
+        this.tail = this.snakePosition[0]
+      }
+
+      setMoveto (direction) {
+        if(this._headMoveto == 'right' || this._headMoveto == 'left' ){
+          if(direction == 'up' || direction == 'down'){
+            this._headMoveto = direction
+            this.move()
+          }
+        }else{
+          if(direction == 'left' || direction == 'right'){ // 左
+            this._headMoveto = direction
+            this.move()
+          }
+        }
+      }
+
+      isOver () {
+        let x = this.head[0]
+        let y = this.head[1]
+
+        if(x < 0 || x >= this.size) return true
+        if(y < 0 || y >= this.size) return true
+
+        let length = this.snakePosition.length - 1
+        for(let i = 0;i < length;i++){
+          if(this.snakePosition[i][0] == x && this.snakePosition[i][1] == y) return true
+        }
+        return false
+      }
+    }
+  </script>
+  <script>
+    let game = document.querySelector('#game')
+    let begin = document.querySelector('#begin')
+    let pause = document.querySelector('#pause')
+
+    const canvas = document.createElement('canvas')
+    canvas.width = 600
+    canvas.height = 600
+    canvas.style.border = '1px solid'
+    game.append(canvas)
+
+    const ctx = canvas.getContext('2d')
+
+    
+    let snake = new GluttonousSnake(canvas.width / 10)
+    let intervalId
+    let isRunning = false
+
+    begin.addEventListener('click', () => {
+      intervalId = setInterval(() => {redraw()}, 100)
+      isRunning = true
+    })
+
+    pause.addEventListener('click',() => {
+      if(intervalId) clearInterval(intervalId)
+      isRunning = false
+    })
+    
+    document.body.addEventListener('keydown', (e) => {
+      if(!isRunning) return
+      debugger
+      if(e.keyCode == 37){
+        e.preventDefault()
+        clearInterval(intervalId)
+        snake.setMoveto('left')
+        intervalId = setInterval(() => {
+          redraw()
+        }, 100)
+      }
+      if(e.keyCode == 38){
+        e.preventDefault()
+        clearInterval(intervalId)
+        snake.setMoveto('up')
+        intervalId = setInterval(() => {
+          redraw()
+        }, 100)
+      }
+      if(e.keyCode == 39){
+        e.preventDefault()
+        clearInterval(intervalId)
+        snake.setMoveto('right')
+        intervalId = setInterval(() => {
+          redraw()
+        }, 100)
+      }
+      if(e.keyCode == 40){
+        e.preventDefault()
+        clearInterval(intervalId)
+        snake.setMoveto('down')
+        intervalId = setInterval(() => {
+          redraw()
+        }, 100)
+      }
+    })
+
+    function redraw () {
+      ctx.clearRect(0,0,canvas.width,canvas.height)
+      ctx.save
+      snake.move()
+      drawSnake()
+      ctx.restore()
+    }
+
+    drawSnake()
+
+
+    function drawSnake() {
+      let snakePosition = snake.snakePosition.map(item => item.map(it => it * 10))
+      let snakeHead = snakePosition.pop()
+      let applePOsition = snake.applePOsition.map(it => it * 10)
+
+      for(let i = 0;i < snakePosition.length;i++){
+        let rx = snakePosition[i][0] + 5
+        let ry = snakePosition[i][1] + 5
+        ctx.beginPath()
+        ctx.arc(rx,ry,5,0,2 * Math.PI)
+        ctx.fillStyle = 'green'
+        ctx.fill()
+        ctx.closePath()
+      }
+
+      let headX = snakeHead[0] + 5
+      let headY = snakeHead[1] + 5
+      
+      ctx.beginPath()
+      ctx.arc(headX,headY,5,0,2 * Math.PI)
+      ctx.fillStyle = 'green'
+      ctx.fill()  
+      ctx.closePath()
+
+      ctx.beginPath()
+      ctx.moveTo(headX,headY)
+      if(snake._headMoveto == 'right'){
+        ctx.arc(headX,headY,5,-0.2 * Math.PI,0.2 * Math.PI)
+      }else if(snake._headMoveto == 'left'){
+        ctx.arc(headX,headY,5,0.8 * Math.PI,1.2 * Math.PI)
+      }else if(snake._headMoveto == 'up'){
+        ctx.arc(headX,headY,5,-0.7 * Math.PI,-0.3 * Math.PI)
+      }else{
+        ctx.arc(headX,headY,5,0.3 * Math.PI,0.7 * Math.PI)
+      }
+      ctx.lineTo(headX,headY)
+      ctx.fillStyle = 'white'
+      ctx.fill()
+      ctx.closePath()
+
+      let appleX = applePOsition[0]
+      let appleY = applePOsition[1]
+      ctx.beginPath()
+      ctx.arc(appleX,appleY,5,0,2 * Math.PI)
+      ctx.fillStyle = 'red'
+      ctx.fill()
+      ctx.closePath()
+    }
+  </script>
+</body>
+</html>

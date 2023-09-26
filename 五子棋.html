@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>五子棋</title>
+</head>
+<body>
+  <p class="tip" style="margin: 10px auto; text-align: center;">请黑棋先落子</p>
+  <div class="app" style="width: 800px; height: 800px; margin: 0 auto;"></div>
+  <script>
+    const app = document.querySelector('.app')
+    const tip = document.querySelector('.tip')
+    const circles = []
+    // 创建标签
+    const canvas = document.createElement('canvas')
+    canvas.width = 800
+    canvas.height = 800
+    canvas.style.backgroundColor = 'rgb(0,130,0)'
+    app.append(canvas)
+    // 获取canvas画笔
+    const context = canvas.getContext('2d')
+
+    for (let i = 40; i < 800; i += 40) {
+      // 绘制棋盘y轴线
+      context.beginPath()
+      context.moveTo(i, 40)
+      context.lineTo(i, 760)
+      context.lineWidth = '1'
+      context.stroke()
+      context.closePath()
+      // 绘制棋盘x轴线
+      context.beginPath()
+      context.moveTo(40, i)
+      context.lineTo(760, i)
+      context.lineWidth = '1'
+      context.stroke()
+      context.closePath()
+
+      circles.push([])
+    }
+
+    
+    let anyoneWin = false // 获胜标识
+    let isBlack = true // 黑白标识
+    canvas.addEventListener('click', (e) => {
+      // 判断是否已经有人获胜
+      if (anyoneWin) return
+      
+
+      // 判断棋子位置是否在棋盘内
+      if (e.offsetX < 30 || e.offsetX > 770 || e.offsetY > 770 || e.offsetY < 30 ) return
+
+      // 计算棋子落点
+      let i = Math.trunc(e.offsetX / 40) + (e.offsetX % 40 > 20 ? 1 : 0)
+      let j = Math.trunc(e.offsetY / 40) + (e.offsetY % 40 > 20 ? 1 : 0)
+      // 判断该位置是否有棋子
+      if (circles[i-1][j-1] != undefined){  
+        tip.innerHTML = '请勿重复落子'
+        return
+      }
+      let x = (i) * 40
+      let y = (j) * 40
+      // 落子
+      isBlack ? blackZ(x,y) : whiteZ(x,y)
+      // 提示
+      tip.innerHTML = isBlack ? '请白棋落子' : '请黑棋落子'
+      // 修改棋子数组
+      circles[i - 1][j - 1] = isBlack ? 'black' : 'white'
+      // 调用获胜判断函数
+      anyoneWin = checkWin(i - 1,j - 1,isBlack)
+
+      // 获胜提示
+      if(anyoneWin) {
+        tip.innerHTML = `${isBlack ? '黑' : '白'}棋赢了,请刷新页面重新开始`
+        return
+      }
+
+      isBlack = !isBlack
+    })
+
+    // 黑棋子
+    function blackZ(x,y) {
+      context.beginPath()
+      context.arc(x, y, 18, 0 * Math.PI / 180,360 * Math.PI / 180)
+
+      const rg = context.createRadialGradient(x-10, y-10, 0, x-10, y-10, 30)
+      rg.addColorStop(0, '#666')
+      rg.addColorStop(1,'black')
+
+      context.fillStyle = rg
+      context.shadowOffsetX = '3'
+      context.shadowOffsetY = '3'
+      context.shadowBlur = '10'
+      context.shadowColor = '#000'
+      context.fill()
+    }
+    // 白棋子
+    function whiteZ(x,y) {
+      context.beginPath()
+      context.arc(x, y, 18, 0 * Math.PI / 180,360 * Math.PI / 180)
+
+      const rg = context.createRadialGradient(x+10, y+10, 0, x+10, y+10, 30)
+      rg.addColorStop(0, '#888')
+      rg.addColorStop(1,'white')
+
+      context.fillStyle = rg
+      context.shadowOffsetX = '3'
+      context.shadowOffsetY = '3'
+      context.shadowBlur = '10'
+      context.shadowColor = '#000'
+      context.fill()
+    }
+    // 判断胜利
+    function checkWin(x,y,isBlack) {
+      // debugger
+      let target = isBlack ? 'black' : 'white'
+      let content1 = 1
+      let content2 = 1
+      let content3 = 1
+      let content4 = 1
+      // 纵向判断
+      for (let i = 1; i < 5; i++) {
+        if(circles[x][y - i] && circles[x][y - i] == target){
+          content1 ++
+        }else{
+          break
+        }
+      }
+      for (let i = 1; i < 5; i++) {
+        if(circles[x][y + i] && circles[x][y + i] == target){
+          content1 ++
+        }else{
+          break
+        }
+      }
+      if (content1 >= 5) {
+        return content1 >= 5
+      }
+      // 横向判断
+      for (let i = 1; i < 5; i++) {
+        if(circles[x - i][y] && circles[x - i][y] == target){
+          content2 ++
+        }else{
+          break
+        }
+      }
+      for (let i = 1; i < 5; i++) {
+        if(circles[x + i][y] && circles[x + i][y] == target){
+          content2 ++
+        }else{
+          break
+        }
+      }
+      if (content2 >= 5) {
+        return content2 >= 5
+      }
+      // 判断纵向
+      for (let i = 1; i < 5; i++) {
+        if(circles[x - i][y - i] && circles[x - i][y - i] == target){
+          content3 ++
+        }else{
+          break
+        }
+      }
+      for (let i = 1; i < 5; i++) {
+        if(circles[x + i][y + i] && circles[x + i][y + i] == target){
+          content3 ++
+        }else{
+          break
+        }
+      }
+      if (content3 >= 5) {
+        return content3 >= 5
+      }
+      for (let i = 1; i < 5; i++) {
+        if(circles[x - i][y + i] && circles[x - i][y + i] == target){
+          content4 ++
+        }else{
+          break
+        }
+      }
+      for (let i = 1; i < 5; i++) {
+        if(circles[x + i][y - i] && circles[x + i][y - i] == target){
+          content4 ++
+        }else{
+          break
+        }
+      }
+      if (content4 >= 5) {
+        return content4 >= 5
+      }
+      return false
+    }
+  </script>
+  
+</body>
+</html>

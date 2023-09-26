@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <style>
+    body,html{
+      width: 100%;
+    }
+    .app{
+      margin: 0 auto;
+      display: flex;
+      gap: 10px;
+      width: 100%;
+    }
+    .control{
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .control > button{
+      height: 30px;
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="game"></div>
+    <div class="control">
+      <button id="next">下一轮</button>
+      <button id="begin">开始演化</button>
+      <div>
+        演化速率 : <input type="number" id="speed" value="200" step="50">
+      </div>
+      <button id="createLife">随机填充</button>
+      <div>
+        生物圈大小 : <input type="number" id="size" value="30" step="10"> <button id="draw">绘制</button>
+      </div>
+    </div>
+  </div>
+  <script>
+    let game = document.querySelector('.game')
+    let begin = document.querySelector('#begin')
+    let next = document.querySelector('#next')
+    let createLife = document.querySelector('#createLife')
+    let speed = document.querySelector('#speed')
+    let sizeIpt = document.querySelector('#size')
+    let drawIpt = document.querySelector('#draw')
+
+    let lifeArr
+    let size
+    let intervalId
+    let runTime = speed.value
+    let isRunning = false
+    
+    
+      // 此处必须将value转为number类型
+      size = Number(sizeIpt.value)
+      
+      game.innerHTML = ''
+      const canvas = document.createElement('canvas')
+      canvas.width = `${size * 20}`
+      canvas.height = `${size * 20}`
+      canvas.style.border = '1px solid'
+      canvas.style.backgroundColor = '#f0f0f0'
+      canvas.style.imageRendering = 'pixelated'
+      game.append(canvas)
+      
+      const ctx = canvas.getContext('2d')
+      
+   
+    // 获取用户缩放级别
+    // 根据用户缩放级别决定是否绘制网格线
+    // 有bug,需要修改
+    // let zoomLevel = window.devicePixelRatio || 1
+    // window.addEventListener('resize', () => {
+    //   zoomLevel = window.devicePixelRatio || 1
+    // })
+
+    // !!!!!!!!!!!!!!bug!!!!!!!!!!!
+    // if(zoomLevel > 0.5) drawLine(true)
+    // !!!!!!!!!!!!!!bug!!!!!!!!!!!
+    drawLine(true)
+
+    speed.addEventListener('input',() => {
+      if(speed.value <= 0) speed.value = 16
+      runTime = speed.value
+      if(isRunning){
+        clearInterval(intervalId)
+        run()
+        intervalId = setInterval(run,runTime)
+      }
+    })
+
+    begin.addEventListener('click', () => {
+      if(!isRunning){
+        run()
+        intervalId = setInterval(run,runTime)
+        isRunning = true
+        begin.textContent = '暂停演化'
+      }else{
+        clearInterval(intervalId)
+        isRunning = false
+        begin.textContent = '开始演化'
+      }
+    })
+    
+    next.addEventListener('click',() => {
+      if(isRunning) {
+        isRunning = false
+        clearInterval(intervalId)
+        begin.textContent = '开始演化'
+      }
+      run()
+    })
+
+    createLife.addEventListener('click',() => {
+      if(isRunning) {
+        isRunning = false
+        clearInterval(intervalId)
+        begin.textContent = '开始演化'
+      }
+      // let arr = []
+      for(let i = 0;i < size;i++){
+        for (let j = 0; j < size; j++) {
+          let randomNum = Math.random()
+          // arr.push(randomNum)
+          if(randomNum < 0.3) {
+            lifeArr[i][j] = 1
+          }
+        }
+      }
+      
+      reDraw()
+      // console.log(arr)
+    })
+
+    // 重绘
+    drawIpt.addEventListener('click',() => {
+        size = Number(sizeIpt.value)
+        canvas.width = `${size * 20}`
+        canvas.height = `${size * 20}`
+        begin.textContent = '开始演化'
+        isRunning = false
+        clearInterval(intervalId)
+        reDraw(true)
+      })
+    
+    canvas.addEventListener('click',(e) => {
+      let i = Math.trunc(e.offsetX / 20)
+      let j = Math.trunc(e.offsetY / 20)
+      
+      if(lifeArr[j][i] == 1){
+        ctx.clearRect(i * 20 + 1,j * 20 + 1,18,18)
+        lifeArr[j][i] = 0
+      }else{
+        ctx.beginPath()
+        ctx.fillStyle = 'pink'
+        ctx.fillRect(i * 20 + 1,j * 20 + 1,18,18)
+        ctx.closePath()
+        lifeArr[j][i] = 1
+      }
+
+    })
+
+    function run () {
+      for(let i = 0;i < size;i++){
+        for (let j = 0; j < size; j++) {
+          let state = false
+          let lifeNeighborCount = computeNum(i,j)
+          if(lifeArr[i][j] == 0){
+            if(lifeNeighborCount == 3) lifeArr[i][j] = 3
+          }else if(lifeArr[i][j] == 1){
+            if(lifeNeighborCount < 2 || lifeNeighborCount > 3) lifeArr[i][j] = 4
+          }
+        }
+      }
+      reDraw()
+    }
+    
+
+    function reDraw (restart = false) {
+      ctx.clearRect(0,0,canvas.width,canvas.height)
+      ctx.save()
+      // !!!!!!!!!!!!!!bug!!!!!!!!!!!
+      // if(intervalId > 0.5) drawLine()
+      // !!!!!!!!!!!!!!bug!!!!!!!!!!!
+      drawLine(restart)
+      for(let i = 0;i < size;i++){
+        for (let j = 0; j < size; j++) {
+          if(lifeArr[i][j] == 1){
+            ctx.beginPath()
+            ctx.fillStyle = 'pink'
+            ctx.fillRect(j * 20 + 1,i * 20 + 1,18,18)
+            ctx.closePath()
+          }else if(lifeArr[i][j] == 3){
+            ctx.beginPath()
+            ctx.fillStyle = 'pink'
+            ctx.fillRect(j * 20 + 1,i * 20 + 1,18,18)
+            ctx.closePath()
+            lifeArr[i][j] = 1
+          }else if(lifeArr[i][j] = 4) lifeArr[i][j] = 0
+        }
+      }
+      ctx.restore()
+    }
+
+    function computeNum (i,j) {
+      let lifeNeighborCount = 0
+      for(let x = i - 1;x <= i + 1;x++){
+        for(let y = j - 1; y <= j + 1; y++){
+          if(x == i && y == j) continue
+          if(lifeArr[x]?.[y] == 1 || lifeArr[x]?.[y] == 4) lifeNeighborCount++
+        }
+      }
+      return lifeNeighborCount
+      }
+
+      function drawLine (begin = false) {
+        if(begin) lifeArr = [Array(size).fill(0)]
+        for(let i = 20;i < canvas.width;i += 20){
+          // 绘制y轴线
+          ctx.beginPath()
+          ctx.moveTo(i, 0)
+          ctx.lineTo(i, canvas.height)
+          ctx.lineWidth = '2'
+          ctx.stroke()
+          ctx.closePath()
+          // 绘制x轴线
+          ctx.beginPath()
+          ctx.moveTo(0,i)
+          ctx.lineTo(canvas.width,i)
+          ctx.lineWidth = '2'
+          ctx.stroke()
+          ctx.closePath()
+          if(begin){
+            lifeArr.push(Array(size).fill(0))
+          }
+        }
+      }
+
+  </script>
+</body>
+</html>

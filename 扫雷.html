@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+<body>
+  <div class="app">
+    <div id="game"></div>
+  </div>
+
+  <script>
+    class MineSweeping {
+
+      constructor (width,height,minesCount) {
+        this.gameWidth = width
+        this.gameHeight = height
+        this.minesCount = minesCount
+        this._gameArr = this.createBoard()
+      }
+
+      createBoard () {
+        let arr = Array(this.gameHeight).fill(0).map(item => Array(this.gameWidth).fill('E'))
+        let num = 0
+        while(num < this.minesCount){
+          let row = Math.random() * gameHeight | 0
+          let column = Math.random() * gameWidth | 0
+          if(arr[row][column] == 'E'){
+            arr[row][column] = 'M'
+            num++
+          }
+        }
+        return arr
+      }
+
+      updatedBoard (click) {
+        let row = click[0]
+        let column = click[1]
+        if(this._gameArr[row][column] == 'M'){
+          // 游戏结束          
+          this._gameArr[row][column] = 'X'
+          return 'game over'
+        }else{
+          this.showBoom(row,column)
+        }
+      }
+
+      searchBoomCount (row,column) {
+        let boomCount = 0
+        for(let i = row - 1;i <= row + 1;i++){  
+          for(let j = column - 1;j <= column + 1;j++){
+            if(i == row && j == column) continue
+            if(this._gameArr[i]?.[j] == 'M') boomCount++
+          }
+        }
+        return boomCount.toString()
+      }
+
+      showBoom (row,column) {
+        if(this._gameArr[row][column] == 'M' || this._gameArr[row][column] == 'B' || (this._gameArr[row][column] >= '1' && this._gameArr[row][column] <= '8')) return
+        let boomCount = this.searchBoomCount(row,column)
+
+        if(boomCount == 0){
+          this._gameArr[row][column] = 'B'
+          for(let i = row - 1;i <= row + 1;i++){  
+            for(let j = column - 1;j <= column + 1;j++){
+              if(i >= 0 && i < this._gameArr.length && j >= 0 && j < this._gameArr[i].length) this.showBoom(i,j)
+            }
+          }
+        }else{
+          this._gameArr[row][column] = boomCount
+        }
+      }
+    }
+
+  </script>
+  <script>
+    let game = document.querySelector('#game')
+
+    let gameWidth = 9
+    let gameHeight = 9
+    let minesCount = 10
+    const boardMainColor = 'rgb(204,204,204)'
+    const borderDorkColor = 'rgb(128,128,128)'
+    const borderLightColor = '#fff'
+    const canvas = document.createElement('canvas')
+    canvas.width = gameWidth * 20 + 24
+    canvas.height = gameHeight * 20 + 68
+    canvas.style.borderRadius = '5px'
+
+    const ctx = canvas.getContext('2d')
+    
+    game.append(canvas)
+    game.style.width = `${canvas.width}px`
+    game.style.margin = '0 auto'
+
+    let gameBoard = new MineSweeping(gameWidth,gameHeight,minesCount)
+
+    drawBoard()
+
+    drawCell()
+
+    canvas.addEventListener('contextmenu',(e) => {e.preventDefault()})
+    canvas.addEventListener('mousedown',(e) => {
+      console.log(e)
+      if(e.offsetX < 10 || e.offsetX > canvas.width - 10 || e.offsetY < 54 || e.offsetY > 54 + gameHeight * 20) return 
+      let row = (e.offsetX - 10) / 20 | 0
+      let column = (e.offsetY - 54) / 20 | 0
+      if(gameBoard._gameArr[row][column] == 'M' ||  gameBoard._gameArr[row][column] == 'E') {
+        if(e.button == 0){
+          update(row,column)
+        }
+        // update(e)
+      }
+    })
+
+    function update (row,column) {
+      if(gameBoard.updatedBoard([row,column])){
+        alert('BOOM')
+      }else{
+        drawCell()
+      }
+    } 
+
+
+    function  drawBoard () {
+      ctx.beginPath()
+      ctx.fillStyle = boardMainColor
+      ctx.fillRect(0,0,canvas.width,canvas.height)
+
+      // 状态栏
+      ctx.beginPath()
+      ctx.moveTo(canvas.width - 11,11)
+      ctx.lineTo(11,11)
+      ctx.lineTo(11,41)
+      ctx.lineWidth = 2
+      ctx.strokeStyle = borderDorkColor
+      ctx.stroke()
+
+      ctx.beginPath()
+      ctx.moveTo(10,41)
+      ctx.lineTo(canvas.width - 11,41)
+      ctx.lineTo(canvas.width - 11,10)
+      ctx.strokeStyle = borderLightColor
+      ctx.stroke()
+
+
+
+      // 内边框
+      ctx.beginPath()
+      ctx.moveTo(canvas.width - 10,52)
+      ctx.lineTo(11,52)
+      ctx.lineTo(11,canvas.height - 11)
+      ctx.strokeStyle = borderDorkColor
+      ctx.stroke()
+
+      ctx.beginPath()
+      ctx.moveTo(10, canvas.height - 12)
+      ctx.lineTo(canvas.width - 11, canvas.height - 12)
+      ctx.lineTo(canvas.width - 11, 51)
+      ctx.strokeStyle = borderLightColor
+      ctx.stroke()
+
+
+    }
+
+    function drawCell () {
+      let paddingTop = 54
+      ctx.clearRect(12,54,gameWidth * 20,gameHeight * 20)
+      
+      for(let i = 1; i <= gameWidth; i++){
+        for(let j = 1; j <= gameHeight; j++){
+          let cellState = gameBoard._gameArr[i - 1][j - 1]
+          if(cellState == 'E' || cellState == 'M'){
+            ctx.globalCompositeOperation = 'source-over'
+            ctx.lineCap = 'round'
+            ctx.beginPath()
+            ctx.moveTo(i * 20 + 10,paddingTop + (j - 1) * 20 + 1)
+            ctx.lineTo((i - 1) * 20 + 13,paddingTop + (j - 1) * 20 + 1)
+            ctx.lineTo((i - 1) * 20 + 13,paddingTop + j * 20 - 2)
+            ctx.lineWidth = 2
+            ctx.strokeStyle = borderLightColor
+            ctx.stroke()
+            ctx.closePath()
+  
+            ctx.beginPath()
+            ctx.moveTo((i - 1) * 20 + 14,paddingTop + j * 20 - 1)
+            ctx.lineTo(i * 20 + 11,paddingTop + j * 20 - 1)
+            ctx.lineTo(i * 20 + 11,paddingTop + (j - 1) * 20 + 2)
+            ctx.lineWidth = 2
+            ctx.strokeStyle = borderDorkColor
+            ctx.stroke()
+            ctx.closePath()
+          }else if(cellState == 'B'){
+            ctx.beginPath()
+            ctx.globalCompositeOperation = 'destination-over'
+            ctx.strokeStyle = borderDorkColor
+            ctx.strokeRect((i - 1) * 20 + 12,(j - 1) * 20 + paddingTop,20,20)
+          }else if(cellState >= '1' && cellState <= '8'){
+            ctx.beginPath()
+            ctx.globalCompositeOperation = 'destination-over'
+            if(cellState == '1'){
+              ctx.fillStyle = 'blue'
+            }else if(cellState == '2'){
+              ctx.fillStyle = 'green'
+            }else if(cellState == '3'){
+              ctx.fillStyle = 'red'
+            }else{
+              ctx.fillStyle = 'black'
+            }
+            ctx.font = "bold 10px serif"
+            ctx.strokeStyle = borderDorkColor
+            ctx.strokeRect((i - 1) * 20 + 12,(j - 1) * 20 + paddingTop,20,20)
+            ctx.fillText(cellState,(i - 1) * 20 + 20,(j - 1) * 20 + 15 + paddingTop)
+          }
+        }
+      }
+
+      ctx.beginPath()
+      ctx.globalCompositeOperation = 'destination-over'
+      ctx.fillStyle = boardMainColor
+      ctx.fillRect(12,54,gameWidth * 20,gameHeight * 20 )
+    }
+   
+  </script>
+</body>
+</html>
